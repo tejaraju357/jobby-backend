@@ -27,7 +27,6 @@ It allows companies to post jobs and candidates to apply for them. The platform 
 - Database: PostgreSQL  
 - Authentication: Middleware using JWT or session-based (customizable)  
 
----
 
-## 📚 Project Structure
+
 

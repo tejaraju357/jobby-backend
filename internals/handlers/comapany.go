@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"jobby/internals/cache"
 	"jobby/internals/db"
 	"jobby/internals/models"
 	"jobby/internals/utils"
@@ -49,7 +50,7 @@ func RegisterCompany(c *fiber.Ctx) error {
 		})
 		return nil
 	}
-
+	PublishNotification(user.ID, "company", "🎉 You have successfully registered!")
 	c.Status(201).JSON(&fiber.Map{
 		"message":   "candidate created successfull",
 		"candidate": user,
@@ -143,14 +144,14 @@ func VerifyOTPCompany(c *fiber.Ctx) error {
 	db.DB.Save(&user)
 
 	token, err := utils.GenerateJWT(user.ID, user.Role)
-
+	cache.Rdb.Set(cache.Ctx, fmt.Sprintf("user:%d", user.ID), token, 24*time.Hour)
 	if err != nil {
 		c.Status(404).JSON(&fiber.Map{
 			"error": "failed to generate token",
 		})
 		return nil
 	}
-
+	PublishNotification(user.ID, "company", "🎉 You have successfully logged in!")
 	c.JSON(&fiber.Map{
 		"message": "login successfull",
 		"token":   token,
@@ -221,7 +222,7 @@ func ListCompanyJobs(c *fiber.Ctx) error {
 	}
 	var jobs []models.Job
 	if err := db.DB.Where("company_id = ?", companyID).Find(&jobs).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "failed to fetch jobs",})
+		return c.Status(500).JSON(fiber.Map{"error": "failed to fetch jobs"})
 	}
 	return c.JSON(fiber.Map{"Jobs": jobs})
 }
@@ -260,6 +261,7 @@ func DeleteCompany(c *fiber.Ctx) error {
 		})
 		return err.Error
 	}
+	PublishNotification(companyModel.ID, "company", "🎉 You have successfully deleted your account!")
 	c.Status(201).JSON(&fiber.Map{
 		"message": "Company deleted successfull",
 	})

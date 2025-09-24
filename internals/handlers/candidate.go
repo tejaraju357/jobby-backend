@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"jobby/internals/cache"
 	"jobby/internals/db"
 	"jobby/internals/models"
 	"jobby/internals/utils"
@@ -48,7 +49,7 @@ func RegisterCandidate(c *fiber.Ctx) error {
 			"details": err.Error(),
 		})
 	}
-
+	PublishNotification(user.ID, "candidate", "🎉 You have successfully registered!")
 	return c.Status(fiber.StatusCreated).JSON(&fiber.Map{
 		"message":   "candidate created successfully",
 		"candidate": user,
@@ -147,13 +148,15 @@ func VerifyOTPCandidate(c *fiber.Ctx) error {
 
 	token, err := utils.GenerateJWT(user.ID, user.Role)
 
+	cache.Rdb.Set(cache.Ctx, fmt.Sprintf("user:%d", user.ID), token, 24*time.Hour)
+
 	if err != nil {
 		c.Status(404).JSON(&fiber.Map{
 			"error": "failed to generate token",
 		})
 		return nil
 	}
-
+	PublishNotification(user.ID, "candidate", "🎉 You have successfully logged in!")
 	c.JSON(&fiber.Map{
 		"message": "login successfull",
 		"token":   token,
@@ -256,7 +259,6 @@ func ListCandidateApplications(c *fiber.Ctx) error {
 	return c.JSON(respList)
 }
 
-
 func ApplyForJob(c *fiber.Ctx) error {
 	candidateID := c.Locals("user_id")
 	jobID := c.Params("id")
@@ -302,7 +304,7 @@ func ApplyForJob(c *fiber.Ctx) error {
 			"details": err.Error(), // Add this for more info
 		})
 	}
-
+	PublishNotification(candidateIDUint, "candidate", "🎉 You have successfully applied for a job!")
 	return c.Status(201).JSON(fiber.Map{
 		"message": "Application created successfully",
 		"data":    application,
@@ -327,7 +329,7 @@ func DeleteCandidate(c *fiber.Ctx) error {
 		})
 		return err.Error
 	}
-
+	PublishNotification(candidateModel.ID, "candidate", "🎉 You have successfully deleted your account!")
 	c.Status(200).JSON(&fiber.Map{
 		"message": "candidate deleted successull",
 	})

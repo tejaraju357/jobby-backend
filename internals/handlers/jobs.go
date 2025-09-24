@@ -76,7 +76,7 @@ func CreateJob(c *fiber.Ctx) error {
 		})
 		return nil
 	}
-
+	PublishNotification(job.CompanyID, "company", "🎉 You have successfully created a job!")
 	c.Status(201).JSON(&fiber.Map{
 		"message": "job created successfull",
 		"job":     job,
@@ -116,7 +116,6 @@ func SearchJobs(c *fiber.Ctx) error {
 }
 
 func DeleteJob(c *fiber.Ctx) error {
-	jobModels := &[]models.Job{}
 	id := c.Params("id")
 
 	if id == "" {
@@ -126,7 +125,17 @@ func DeleteJob(c *fiber.Ctx) error {
 		return nil
 	}
 
-	err := db.DB.Delete(jobModels, id)
+	jobModel := &models.Job{}
+	errGet := db.DB.Where("id = ?", id).First(jobModel).Error
+	if errGet != nil {
+		c.Status(404).JSON(&fiber.Map{
+			"message": "could not find job to delete",
+			"details": errGet.Error(),
+		})
+		return nil
+	}
+
+	err := db.DB.Delete(jobModel, id)
 
 	if err != nil {
 		c.Status(404).JSON(&fiber.Map{
@@ -134,7 +143,7 @@ func DeleteJob(c *fiber.Ctx) error {
 		})
 		return nil
 	}
-
+	PublishNotification(jobModel.CompanyID, "company", "🎉 You have successfully deleted a job!")
 	c.Status(201).JSON(&fiber.Map{
 		"message": "job deleted successfull",
 	})
